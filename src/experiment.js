@@ -32,7 +32,7 @@ export function getTrialImages(videoName) {
 
   return [1, 2, 3].map(number => ({
     label: String(number),
-    src: `/images/${baseName}_${number}.png`
+    src: `${process.env.BASE_URL}images/${baseName}_${number}.png`
   }));
 }
 
