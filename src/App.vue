@@ -1,144 +1,264 @@
+
 <template>
-  <Experiment title="Study-74">
+  <div id="app">
 
-    <!-- General information -->
-    <GeneralInstructions />
+    <!-- Startseite -->
+    <StartPage
+      v-if="phase === 'start'"
+      @start="startExperiment"
+    />
 
-    <!-- Task instructions -->
-    <Instructions />
+    <!-- Videos -->
+    <VideoScreen
+      v-else-if="phase === 'intro' || phase === 'trialVideo' || phase === 'end'"
+      :key="phase + '-' + trialIndex"
+      :video-src="currentVideo"
+      @finished="onVideoFinished"
+    />
 
-    <!-- 24 experimental stories -->
-    <Screen
-      v-for="trial in participantTrials"
-      :key="`${trial.storyId}-${trial.condition}`"
-    >
-      <Slide>
-        <StoryTrial
-          :trial="trial"
-          @complete="completeStory"
-        />
-      </Slide>
-    </Screen>
+    <!-- Antwortauswahl -->
+    <ResponseScreen
+      v-else-if="phase === 'response'"
+      :images="currentImages"
+      @answer="saveAnswer"
+    />
 
-    <FinalQuestionnaire />
+<!-- Abschluss -->
+<div v-else-if="phase === 'done'" class="finished">
+  <h1>Vielen Dank!</h1>
+  <p>Das Experiment ist beendet.</p>
+  <p>Versuchsperson: {{ participantId }}</p>
+  <p>
+  Bisher auf diesem Gerät gespeichert:
+  {{ savedParticipantCount }} Teilnehmende
+</p>
 
-    <!-- Final information -->
-    <EndExperiment />
+  <button @click="exportData">
+    Daten herunterladen (CSV)
+  </button>
+</div>
 
-    <!-- Submit data to the server -->
-    <SubmitResultsScreen />
-
-  </Experiment>
+  </div>
 </template>
 
-
 <script>
-import GeneralInstructions from "./GeneralInstructions.vue";
-import Instructions from "./Instructions.vue";
-import StoryTrial from "./StoryTrial.vue";
-import EndExperiment from "./EndExperiment.vue";
-import FinalQuestionnaire from "./FinalQuestionnaire.vue";
+import StartPage from "./components/StartPage.vue";
+import VideoScreen from "./components/VideoScreen.vue";
+import ResponseScreen from "./components/ResponseScreen.vue";
 
-import {
-  createParticipantTrials
-} from "./trials.js";
-
+import experiment, { getTrialImages } from "./experiment.js";
 
 export default {
   name: "App",
 
   components: {
-    GeneralInstructions,
-    Instructions,
-    StoryTrial,
-    FinalQuestionnaire,
-    EndExperiment
-
+    StartPage,
+    VideoScreen,
+    ResponseScreen
   },
 
   data() {
     return {
-      listNumber: null,
+      phase: "start",
+
+      participantId: "",
+      selectedList: null,
+
+      trialIndex: 0,
       participantTrials: [],
 
-      prolificPid: null,
-      prolificStudyId: null,
-      prolificSessionId: null
+      answers: [],
+      savedParticipantCount: 0
     };
   },
 
-  methods: {
-    completeStory(results) {
-      this.$magpie.addTrialData(results);
-      this.$magpie.nextScreen();
-    }
-  },
-
   created() {
-    const params =
-      new URLSearchParams(
-        window.location.search
-      );
-
-    // -----------------------------------------
-    // 1. Read Latin-square list from Taskflow
-    // -----------------------------------------
-
-    this.listNumber = Number(params.get("list"));
-
-    if (
-      !Number.isInteger(this.listNumber) ||
-      this.listNumber < 1 ||
-      this.listNumber > 4
-    ) {
-      throw new Error(
-        "Invalid or missing Latin-square list."
-      );
-    }
-
-
-    // -----------------------------------------
-    // 2. Read Prolific identifiers
-    // -----------------------------------------
-
-    this.prolificPid =
-      params.get("PROLIFIC_PID");
-
-    this.prolificStudyId =
-      params.get("STUDY_ID");
-
-    this.prolificSessionId =
-      params.get("SESSION_ID");
-
-
-    // -----------------------------------------
-    // 3. Create this participant's trials
-    // -----------------------------------------
-
-    this.participantTrials =
-      createParticipantTrials(
-        this.listNumber
-      );
+  this.updateSavedParticipantCount();
   },
 
- 
+  computed: {
+    currentVideo() {
+      const list = experiment[this.selectedList];
 
-  mounted() {
-    // Save participant-level information
-    // with the experiment data.
-    this.$magpie.addExpData({
-      latin_square_list:
-        this.listNumber,
+      if (this.phase === "intro") {
+        return `/videos/${list.intro}`;
+      }
 
-      prolific_pid:
-        this.prolificPid,
+      if (this.phase === "trialVideo") {
+        return `/videos/${list.trials[this.trialIndex]}`;
+      }
 
-      prolific_study_id:
-        this.prolificStudyId,
+      if (this.phase === "end") {
+        return `/videos/${list.end}`;
+      }
 
-      prolific_session_id:
-        this.prolificSessionId
-    });
+      return "";
+    },
+
+    currentImages() {
+      const videoName =
+        this.participantTrials[this.trialIndex];
+
+      return getTrialImages(videoName);
+    }
+  },
+
+  methods: {
+    startExperiment(data) {
+      this.participantId = data.participantId;
+      this.selectedList = data.list;
+
+      this.participantTrials =
+        experiment[this.selectedList].trials;
+
+      this.trialIndex = 0;
+      this.answers = [];
+
+      // Startdaten sofort lokal speichern
+      this.saveLocally();
+
+      this.phase = "intro";
+    },
+
+    onVideoFinished() {
+      if (this.phase === "intro") {
+        this.phase = "trialVideo";
+      } else if (this.phase === "trialVideo") {
+        this.phase = "response";
+      } else if (this.phase === "end") {
+        this.phase = "done";
+      }
+    },
+
+    saveAnswer(answer) {
+      const videoName =
+        this.participantTrials[this.trialIndex];
+
+      this.answers.push({
+        participantId: this.participantId,
+        list: this.selectedList,
+        trial: this.trialIndex + 1,
+        video: videoName,
+        answer: answer,
+        timestamp: new Date().toISOString()
+      });
+
+      // Antwort sofort lokal speichern
+      this.saveLocally();
+
+      // Direkt zum nächsten Durchgang
+      if (this.trialIndex < this.participantTrials.length - 1) {
+        this.trialIndex++;
+        this.phase = "trialVideo";
+      } else {
+        this.phase = "end";
+      }
+    },
+
+    saveLocally() {
+      const storageKey = "tom1_experiment_data";
+
+      const existingData = JSON.parse(
+        localStorage.getItem(storageKey) || "[]"
+      );
+
+      const participantData = {
+        participantId: this.participantId,
+        list: this.selectedList,
+        answers: this.answers
+      };
+
+      const otherParticipants = existingData.filter(
+        item => item.participantId !== this.participantId
+      );
+
+      otherParticipants.push(participantData);
+
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify(otherParticipants)
+      );
+      this.updateSavedParticipantCount();
+    },
+
+    exportData() {
+      const storageKey = "tom1_experiment_data";
+
+      const allData = JSON.parse(
+        localStorage.getItem(storageKey) || "[]"
+     );
+
+      // Eine Zeile pro beantwortetem Trial
+      const rows = [];
+
+      allData.forEach(participant => {
+        participant.answers.forEach(answer => {
+          rows.push({
+            participantId: `="${answer.participantId}"`,            
+            list: answer.list,
+            trial: answer.trial,
+            video: answer.video,
+            answer: answer.answer,
+            timestamp: answer.timestamp
+          });
+        });
+      });
+
+      // CSV-Kopfzeile
+      const headers = [
+        "participantId",
+        "list",
+        "trial",
+        "video",
+        "answer",
+        "timestamp"
+      ];
+
+      const csvContent = [
+        headers.join(";"),
+        ...rows.map(row =>
+          headers.map(header =>
+            `"${String(row[header] ?? "").replace(/"/g, '""')}"`
+          ).join(";")
+        )
+      ].join("\n");
+
+      // CSV-Datei erstellen und herunterladen
+      const blob = new Blob(
+        ["\uFEFF" + csvContent],
+        { type: "text/csv;charset=utf-8;" }
+      );
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = "tom1_experiment_data.csv";
+      link.click();
+
+      URL.revokeObjectURL(url);
+    },
+    updateSavedParticipantCount() {
+      const storageKey = "tom1_experiment_data";
+
+      const existingData = JSON.parse(
+        localStorage.getItem(storageKey) || "[]"
+      );
+
+      this.savedParticipantCount = existingData.length;
+    }
   }
 };
 </script>
+
+<style>
+#app {
+  font-family: Arial, sans-serif;
+  color: #222;
+}
+
+.finished {
+  margin: 80px auto;
+  text-align: center;
+}
+</style>
