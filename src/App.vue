@@ -81,15 +81,13 @@ export default {
       const list = experiment[this.selectedList];
 
       if (this.phase === "intro") {
-        return `/videos/${list.intro}`;
+        return `${process.env.BASE_URL}videos/${list.intro}`;
       }
-
       if (this.phase === "trialVideo") {
-        return `/videos/${list.trials[this.trialIndex]}`;
+        return `${process.env.BASE_URL}videos/${list.trials[this.trialIndex]}`;
       }
-
       if (this.phase === "end") {
-        return `/videos/${list.end}`;
+        return `${process.env.BASE_URL}videos/${list.end}`;
       }
 
       return "";
