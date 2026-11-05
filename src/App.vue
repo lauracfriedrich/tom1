@@ -132,12 +132,15 @@ export default {
       const videoName =
         this.participantTrials[this.trialIndex];
 
+      const category = experiment[this.selectedList].answers[videoName][answer];
+
       this.answers.push({
         participantId: this.participantId,
         list: this.selectedList,
         trial: this.trialIndex + 1,
         video: videoName,
         answer: answer,
+        category: category,
         timestamp: new Date().toISOString()
       });
 
@@ -197,6 +200,7 @@ export default {
             trial: answer.trial,
             video: answer.video,
             answer: answer.answer,
+            category: answer.category,
             timestamp: answer.timestamp
           });
         });
@@ -209,6 +213,7 @@ export default {
         "trial",
         "video",
         "answer",
+        "category",
         "timestamp"
       ];
 
