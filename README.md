@@ -1,4 +1,4 @@
-# norming_irony_adults
+# ToM (1st order)
 
 This is a sample experiment using magpie.
 ### Setup

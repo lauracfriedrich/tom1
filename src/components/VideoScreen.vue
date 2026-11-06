@@ -6,16 +6,23 @@
       ref="video"
       :src="videoSrc"
       @ended="onVideoEnded"
+      @click="togglePause"
       playsinline
       preload="auto"
     ></video>
 
+    <!-- Start-Button -->
     <div v-if="!videoStarted && !videoFinished" class="overlay">
-    <button class="play-button" @click="playVideo" aria-label="Video starten">
+      <button
+        class="play-button"
+        @click="playVideo"
+        aria-label="Video starten"
+      >
         ▶
-    </button>
+      </button>
     </div>
 
+    <!-- Abschluss -->
     <div v-if="videoFinished" class="finished">
       Video beendet.
     </div>
@@ -42,24 +49,30 @@ export default {
 
   methods: {
     playVideo() {
+      // Vollbildmodus aktivieren
+      const element = document.documentElement;
+
+      if (element.requestFullscreen) {
+        element.requestFullscreen().catch(() => {});
+      } else if (element.webkitRequestFullscreen) {
+        element.webkitRequestFullscreen();
+      }
+
+      // Video starten
       this.videoStarted = true;
       this.$refs.video.play();
     },
-    playVideo() {
-  // Vollbildmodus aktivieren
-  const element = document.documentElement;
 
-  if (element.requestFullscreen) {
-    element.requestFullscreen().catch(() => {});
-  } else if (element.webkitRequestFullscreen) {
-    element.webkitRequestFullscreen();
-  }
+    // Video durch Tippen pausieren oder fortsetzen
+    togglePause() {
+      const video = this.$refs.video;
 
-  // Video starten
-  this.videoStarted = true;
-  this.$refs.video.play();
-},
-    
+      if (video.paused) {
+        video.play();
+      } else {
+        video.pause();
+      }
+    },
 
     onVideoEnded() {
       this.videoFinished = true;
