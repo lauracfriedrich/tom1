@@ -19,6 +19,18 @@ module.exports = {
     lintStyleOnBuild: false,
     stylelint: {}
   },
+  pwa: {
+    name: 'tom1',
+    workboxOptions: {
+      include: [
+        /\.html$/,
+        /\.js$/,
+        /\.css$/,
+        /\.(?:ico|png|svg|jpg|jpeg|mp4|mp3|wav)$/
+      ],
+      maximumFileSizeToCacheInBytes: 100 * 1024 * 1024
+    }
+  },
   publicPath:
     process.env.NODE_ENV === 'production'
       ? '/tom1/'
