@@ -5,13 +5,13 @@
 
     <div class="form-group">
       <label for="participant-id">
-        Versuchspersonen-ID:
+        VP-Nummer:
       </label>
       <input
         id="participant-id"
         v-model="participantId"
         type="text"
-        placeholder="ID des Kindes eingeben"
+        placeholder="VP-Nummer des Kindes eingeben"
       />
     </div>
 

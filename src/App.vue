@@ -27,7 +27,7 @@
 <div v-else-if="phase === 'done'" class="finished">
   <h1>Vielen Dank!</h1>
   <p>Das Experiment ist beendet.</p>
-  <p>Versuchsperson: {{ participantId }}</p>
+  <p>VP-Nummer: {{ participantId }}</p>
   <p>
   Bisher auf diesem Gerät gespeichert:
   {{ savedParticipantCount }} Teilnehmende
