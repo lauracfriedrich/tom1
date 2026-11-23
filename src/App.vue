@@ -1,8 +1,7 @@
 
 <template>
   <div id="app">
-    <div class="status-bar-background" aria-hidden="true"></div>
-
+  
     <!-- Startseite -->
     <StartPage
       v-if="phase === 'start'"
@@ -267,17 +266,6 @@ body {
   color: #222;
   background-color: #ffffff;
   min-height: 100vh;
-}
-
-.status-bar-background {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: env(safe-area-inset-top);
-  background: black;
-  z-index: 9999;
-  pointer-events: none;
 }
 
 .finished {
